@@ -59,7 +59,7 @@ class LogisticRegression:
         """
             Makes predictions on new data using the learned parameters
         """
-        linear_model = np.dot(X, self.weight) + self.bias
+        linear_model = (X @ self.weight) + self.bias
 
         y_predicted_probabilities = self.sigmoid(linear_model)
         y_predicted_labels = [1 if i > 0.5 else 0 for i in y_predicted_probabilities]
