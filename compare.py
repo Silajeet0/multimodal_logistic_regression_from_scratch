@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time  # To time our models
+import pickle  # To save our model
 from getData import readMNIST
 from model import MultiClassLogisticRegression
 
@@ -9,7 +10,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import LinearSVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, precision_recall_fscore_support
 import seaborn as sns
 
 # --- File Paths ---
@@ -21,12 +22,33 @@ test_image_path = "Dataset/fashionmnist/t10k-images"
 
 # --- Helper Function ---
 def one_hot_encode(labels, n_classes):
-    """
-    Converts a 1D array of labels into a 2D one-hot encoded matrix.
-    """
     one_hot_labels = np.zeros((labels.size, n_classes))
     one_hot_labels[np.arange(labels.size), labels] = 1
     return one_hot_labels
+
+
+# --- Plotting Function ---
+def plot_comparison_chart(results, metric_name, title):
+    """Helper function to plot a comparison bar chart for a given metric."""
+    model_names = list(results.keys())
+    metric_values = [res[metric_name] for res in results.values()]
+
+    plt.figure(figsize=(10, 6))
+    colors = ['#ff6666'] + ['#66b3ff'] * (len(model_names) - 1)  # Highlight your model
+    bars = plt.bar(model_names, metric_values, color=colors)
+
+    plt.ylabel(metric_name)
+    plt.title(title)
+    plt.xticks(rotation=15, ha='right')
+    plt.ylim(0, 1.0)  # All these metrics are between 0 and 1
+
+    # Add the value on top of each bar
+    for bar in bars:
+        yval = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width() / 2.0, yval + 0.01, f'{yval * 100:.1f}%', ha='center', va='bottom')
+
+    plt.tight_layout()
+    plt.show()
 
 
 # --- Main script execution ---
@@ -40,29 +62,33 @@ try:
 
     # 2. PREPROCESSING
     print("Preprocessing data...")
-    # a. Flatten Images
-    x_train = train_images.reshape(train_images.shape[0], -1)  # Shape -> (60000, 784)
-    x_test = test_images.reshape(test_images.shape[0], -1)  # Shape -> (10000, 784)
-
-    # b. Normalize Pixels
-    x_train = x_train.astype('float32') / 255.0
-    x_test = x_test.astype('float32') / 255.0
+    x_train = train_images.reshape(train_images.shape[0], -1).astype('float32') / 255.0
+    x_test = test_images.reshape(test_images.shape[0], -1).astype('float32') / 255.0
     print(f"X data preprocessed. Shape: {x_train.shape, x_test.shape}")
 
-    # c. One-Hot Encode Training Labels (for our model only)
-    y_train_one_hot = one_hot_encode(train_labels, 10)
-    print(f"Y training labels one-hot encoded. Shape: {y_train_one_hot.shape}")
+    # --- SPEEDUP TACTIC: Subsample the training data ---
+    n_samples_for_bakeoff = 10000  # Use 10k samples
+    idx = np.random.choice(x_train.shape[0], n_samples_for_bakeoff, replace=False)
+
+    x_train_bakeoff = x_train[idx]
+    y_train_labels_bakeoff = train_labels[idx]  # For sklearn
+
+    # One-hot encode the subset for your model
+    y_train_one_hot_bakeoff = one_hot_encode(y_train_labels_bakeoff, 10)
+
+    print(f"Subsampled data for bake-off. New shape: {x_train_bakeoff.shape}")
     print("\n--- Data successfully loaded and preprocessed! ---")
 
     # 3. TRAIN & EVALUATE YOUR FROM-SCRATCH MODEL
     print("\n--- Training From-Scratch Model ---")
-    n_features = x_train.shape[1]  # 784
+    n_features = x_train_bakeoff.shape[1]  # 784
     n_classes = 10
 
     start_time = time.time()
 
     model = MultiClassLogisticRegression(n_features=n_features, n_classes=n_classes)
-    model.fit(x_train, y_train_one_hot, learning_rate=0.1, epochs=1000)
+    # Using 500 epochs based on your loss curve analysis
+    model.fit(x_train_bakeoff, y_train_one_hot_bakeoff, learning_rate=0.1, epochs=500)
 
     end_time = time.time()
     from_scratch_time = end_time - start_time
@@ -71,65 +97,81 @@ try:
 
     print("Evaluating from-scratch model...")
     y_pred_scratch = model.predict(x_test)
-    accuracy_scratch = np.mean(y_pred_scratch == test_labels)
 
-    # Store results for final comparison
+    # Get all metrics
+    report_scratch = classification_report(test_labels, y_pred_scratch, output_dict=True)
+
     results = {
         "From-Scratch LR": {
-            "accuracy": accuracy_scratch,
+            "accuracy": report_scratch['accuracy'],
+            "precision": report_scratch['weighted avg']['precision'],
+            "recall": report_scratch['weighted avg']['recall'],
+            "f1-score": report_scratch['weighted avg']['f1-score'],
             "time": from_scratch_time
         }
     }
 
+    # --- Save your trained model ---
+    print("Saving trained model to file...")
+    with open('my_fashion_mnist_model.pkl', 'wb') as f:
+        pickle.dump(model, f)
+    print("Model saved!")
+
     # 4. TRAIN & EVALUATE SKLEARN MODELS
     print("\n--- Training Scikit-learn Models (The Bake-Off) ---")
 
-    # Define the models to compare
     models_to_compare = {
-        "K-Nearest Neighbors (KNN)": KNeighborsClassifier(n_neighbors=5),
-        "Linear SVM": LinearSVC(max_iter=2000, dual=True),  # dual=True is often faster
-        "Random Forest": RandomForestClassifier(n_estimators=100, random_state=42),
-        "RBF Kernel SVM": SVC(kernel='rbf', C=1.0)  # C=1.0 is a reasonable default
+        "K-Nearest Neighbors (KNN)": KNeighborsClassifier(n_neighbors=5, n_jobs=-1),
+        "Linear SVM": LinearSVC(max_iter=2000, dual=True),
+        "Random Forest": RandomForestClassifier(n_estimators=50, random_state=42, n_jobs=-1),
+        "RBF Kernel SVM": SVC(kernel='rbf', C=1.0)
     }
 
-    # Loop, train, time, and evaluate each model
     for name, sk_model in models_to_compare.items():
         print(f"\nTraining {name}...")
         start_time = time.time()
-
-        # Train the model. Sklearn models take the original 1D labels.
-        sk_model.fit(x_train, train_labels)
-
+        sk_model.fit(x_train_bakeoff, y_train_labels_bakeoff)
         end_time = time.time()
         train_time = end_time - start_time
 
         # Evaluate
         y_pred_sk = sk_model.predict(x_test)
-        accuracy_sk = np.mean(y_pred_sk == test_labels)
+        report_sk = classification_report(test_labels, y_pred_sk, output_dict=True)
 
         print(f"Training complete in {train_time:.2f} seconds.")
-        print(f"Accuracy: {accuracy_sk * 100:.2f}%")
 
         # Store results
-        results[name] = {"accuracy": accuracy_sk, "time": train_time}
+        results[name] = {
+            "accuracy": report_sk['accuracy'],
+            "precision": report_sk['weighted avg']['precision'],
+            "recall": report_sk['weighted avg']['recall'],
+            "f1-score": report_sk['weighted avg']['f1-score'],
+            "time": train_time
+        }
 
-    # 5. FINAL RESULTS SUMMARY
+    # 5. FINAL RESULTS SUMMARY (TABLE)
     print("\n\n--- FINAL PROJECT BAKE-OFF RESULTS ---")
-    print("-----------------------------------------------------")
-    print(f"| {'Model Name':<25} | {'Test Accuracy':<15} | {'Training Time (s)':<18} |")
-    print("|" + "-" * 26 + "|" + "-" * 17 + "|" + "-" * 20 + "|")
+    print("-----------------------------------------------------------------------------------------")
+    print(
+        f"| {'Model Name':<25} | {'Accuracy':<10} | {'Precision':<10} | {'Recall':<10} | {'F1-Score':<10} | {'Train Time (s)':<16} |")
+    print("|" + "-" * 26 + "|" + "-" * 12 + "|" + "-" * 12 + "|" + "-" * 12 + "|" + "-" * 12 + "|" + "-" * 18 + "|")
 
     for name, metrics in results.items():
-        print(f"| {name:<25} | {metrics['accuracy'] * 100:<14.2f}% | {metrics['time']:<18.2f} |")
-    print("-----------------------------------------------------")
+        print(
+            f"| {name:<25} | {metrics['accuracy'] * 100:<9.2f}% | {metrics['precision']:<9.2f} | {metrics['recall']:<9.2f} | {metrics['f1-score']:<9.2f} | {metrics['time']:<16.2f} |")
+    print("-----------------------------------------------------------------------------------------")
 
-    # 6. DETAILED REPORT FOR YOUR FROM-SCRATCH MODEL
+    # 6. FINAL RESULTS SUMMARY (PLOTS)
+    print("\nGenerating comparison charts...")
+    plot_comparison_chart(results, "accuracy", "Model Accuracy Comparison")
+    plot_comparison_chart(results, "precision", "Model Precision (Weighted Avg) Comparison")
+    plot_comparison_chart(results, "recall", "Model Recall (Weighted Avg) Comparison")
+    plot_comparison_chart(results, "f1-score", "Model F1-Score (Weighted Avg) Comparison")
+
+    # 7. DETAILED REPORT FOR YOUR FROM-SCRATCH MODEL
     print("\n\n--- Detailed Report for From-Scratch Model ---")
-    print(f"Accuracy: {results['From-Scratch LR']['accuracy'] * 100:.2f}%")
-
     target_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
                     'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
-    print("\nClassification Report:")
     print(classification_report(test_labels, y_pred_scratch, target_names=target_names))
 
     # --- Confusion Matrix ---
@@ -146,7 +188,7 @@ try:
     # --- Loss Curve ---
     plt.figure()  # Create a new figure
     plt.plot(model.loss_history)
-    plt.title("From-Scratch Model Loss During Training")
+    plt.title("From-Scratch Model Loss During Training (500 Epochs)")
     plt.xlabel("Epoch")
     plt.ylabel("Cross-Entropy Loss")
     plt.grid(True)
