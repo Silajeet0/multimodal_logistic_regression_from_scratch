@@ -28,6 +28,28 @@ try:
 
     print(f"\nData loaded successfully! Shapes: {train_images.shape, train_labels.shape}")
 
+    fig, axes = plt.subplots(2, 5, figsize=(15, 6))
+
+    # Flatten the 2x5 grid into a 1D array for easy looping
+    axes = axes.flatten()
+    TARGET_NAMES = [
+        'T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
+        'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot'
+    ]
+
+    for i in range(10):
+        image_array = train_images[i]
+        label_index = train_labels[i]
+        label_name = TARGET_NAMES[label_index]
+
+        axes[i].imshow(image_array, cmap='gray')
+        axes[i].set_title(f"Label: {label_name}")
+        axes[i].axis('off')  # Hide the ugly axes
+
+    plt.suptitle("Sample Images from the Fashion-MNIST Dataset", fontsize=16)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust layout to make room for title
+    print("Displaying images...")
+    plt.show()
     # 5. PREPROCESSING
     print("Preprocessing data...")
 

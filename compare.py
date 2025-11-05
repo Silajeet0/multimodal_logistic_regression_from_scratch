@@ -66,29 +66,20 @@ try:
     x_test = test_images.reshape(test_images.shape[0], -1).astype('float32') / 255.0
     print(f"X data preprocessed. Shape: {x_train.shape, x_test.shape}")
 
-    # --- SPEEDUP TACTIC: Subsample the training data ---
-    n_samples_for_bakeoff = 10000  # Use 10k samples
-    idx = np.random.choice(x_train.shape[0], n_samples_for_bakeoff, replace=False)
-
-    x_train_bakeoff = x_train[idx]
-    y_train_labels_bakeoff = train_labels[idx]  # For sklearn
-
-    # One-hot encode the subset for your model
-    y_train_one_hot_bakeoff = one_hot_encode(y_train_labels_bakeoff, 10)
-
-    print(f"Subsampled data for bake-off. New shape: {x_train_bakeoff.shape}")
+    y_train_one_hot = one_hot_encode(train_labels, 10)
+    print(f"Y training labels one-hot encoded. Shape: {y_train_one_hot.shape}")
     print("\n--- Data successfully loaded and preprocessed! ---")
 
-    # 3. TRAIN & EVALUATE YOUR FROM-SCRATCH MODEL
+    # 3. TRAIN & EVALUATE THE HANDCRAFTED LOGISTIC REGRESSION MODEL
     print("\n--- Training From-Scratch Model ---")
-    n_features = x_train_bakeoff.shape[1]  # 784
+    n_features = x_train.shape[1]  # 784
     n_classes = 10
 
     start_time = time.time()
 
     model = MultiClassLogisticRegression(n_features=n_features, n_classes=n_classes)
-    # Using 500 epochs based on your loss curve analysis
-    model.fit(x_train_bakeoff, y_train_one_hot_bakeoff, learning_rate=0.1, epochs=500)
+    # Using 500 epochs based on previous loss curve analysis
+    model.fit(x_train, y_train_one_hot, learning_rate=0.1, epochs=500)
 
     end_time = time.time()
     from_scratch_time = end_time - start_time
@@ -111,14 +102,8 @@ try:
         }
     }
 
-    # --- Save your trained model ---
-    print("Saving trained model to file...")
-    with open('my_fashion_mnist_model.pkl', 'wb') as f:
-        pickle.dump(model, f)
-    print("Model saved!")
-
     # 4. TRAIN & EVALUATE SKLEARN MODELS
-    print("\n--- Training Scikit-learn Models (The Bake-Off) ---")
+    print("\n--- Training Scikit-learn Models ---")
 
     models_to_compare = {
         "K-Nearest Neighbors (KNN)": KNeighborsClassifier(n_neighbors=5, n_jobs=-1),
@@ -130,7 +115,7 @@ try:
     for name, sk_model in models_to_compare.items():
         print(f"\nTraining {name}...")
         start_time = time.time()
-        sk_model.fit(x_train_bakeoff, y_train_labels_bakeoff)
+        sk_model.fit(x_train, train_labels)
         end_time = time.time()
         train_time = end_time - start_time
 
@@ -149,32 +134,16 @@ try:
             "time": train_time
         }
 
-    # 5. FINAL RESULTS SUMMARY (TABLE)
-    print("\n\n--- FINAL PROJECT BAKE-OFF RESULTS ---")
-    print("-----------------------------------------------------------------------------------------")
-    print(
-        f"| {'Model Name':<25} | {'Accuracy':<10} | {'Precision':<10} | {'Recall':<10} | {'F1-Score':<10} | {'Train Time (s)':<16} |")
-    print("|" + "-" * 26 + "|" + "-" * 12 + "|" + "-" * 12 + "|" + "-" * 12 + "|" + "-" * 12 + "|" + "-" * 18 + "|")
-
-    for name, metrics in results.items():
-        print(
-            f"| {name:<25} | {metrics['accuracy'] * 100:<9.2f}% | {metrics['precision']:<9.2f} | {metrics['recall']:<9.2f} | {metrics['f1-score']:<9.2f} | {metrics['time']:<16.2f} |")
-    print("-----------------------------------------------------------------------------------------")
-
-    # 6. FINAL RESULTS SUMMARY (PLOTS)
+    # FINAL RESULTS SUMMARY (PLOTS)
     print("\nGenerating comparison charts...")
     plot_comparison_chart(results, "accuracy", "Model Accuracy Comparison")
     plot_comparison_chart(results, "precision", "Model Precision (Weighted Avg) Comparison")
     plot_comparison_chart(results, "recall", "Model Recall (Weighted Avg) Comparison")
     plot_comparison_chart(results, "f1-score", "Model F1-Score (Weighted Avg) Comparison")
 
-    # 7. DETAILED REPORT FOR YOUR FROM-SCRATCH MODEL
-    print("\n\n--- Detailed Report for From-Scratch Model ---")
+    # --- Confusion Matrix ---
     target_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
                     'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
-    print(classification_report(test_labels, y_pred_scratch, target_names=target_names))
-
-    # --- Confusion Matrix ---
     print("Generating Confusion Matrix for From-Scratch Model...")
     cm = confusion_matrix(test_labels, y_pred_scratch)
     plt.figure(figsize=(10, 8))
