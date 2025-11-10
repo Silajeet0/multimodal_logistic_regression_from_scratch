@@ -60,9 +60,12 @@ try:
 
     # 7. EVALUATE THE MODEL
     print("Evaluating model...")
+    print(f"Final Training Error (Loss): {model.loss_history[-1]:.4f}")
     y_predictions = model.predict(x_test)
     accuracy = np.mean(y_predictions == test_labels)
+    test_error = 1.0 - accuracy
     print(f"Model Accuracy on Test Set: {accuracy * 100:.2f}%")
+    print(f"Model Error on Test Set : {test_error * 100:.2f}%")
 
     print("\nClassification Report:")
     # This report gives you Precision, Recall, and F1-score for each class
