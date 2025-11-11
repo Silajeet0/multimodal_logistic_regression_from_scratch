@@ -37,7 +37,7 @@ def readMNIST(label_filepath, image_filepath):
             Little-Endian: Stores the "little end" (least significant byte) first. 
         Since the MNIST file format was designed to be big-endian, we must explicitly tell our parsing code to 
         read the bytes in that order using the > symbol. If we didn't, struct might use the system's native format 
-        (likely little-endian) and get the header numbers completely wrong.
+        and get the header numbers completely wrong.
         '''
 
         if magic_number != 2049:
