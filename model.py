@@ -60,7 +60,9 @@ class MultiClassLogisticRegression:
                 Y_val (np.array, optional): True one-hot encoded validation labels.
                 patience (int, optional): Number of epochs to wait for improvement
                                          on the validation loss before stopping.
-
+                min_delta (int, optional): The minimum decrease in validation loss required to count
+                                           as an "improvement" and reset the patience counter.
+                                           Defaults to 1e-4.
             Returns:
                 The learned weights, bias, and loss history.
         """

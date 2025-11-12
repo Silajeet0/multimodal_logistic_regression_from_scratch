@@ -75,11 +75,12 @@ try:
     model.fit(
         x_train, y_train_one_hot,
         learning_rate=0.2,
-        epochs=2000,
+        epochs=2000, # this was just used to demonstrate the early stopping feature of the model, from the analysis of
+        # the loss curve, an epoch value of 500 works fairly well (which is used as the default value in the fit method)
         X_val=x_val,
         Y_val=y_val_one_hot,
-        patience=50,
-        min_delta = 1e-3
+        patience=45, # the model continues to train if the improvement is more than a certain threshold after 45 epochs, else it stops
+        min_delta = 1e-3 # the threshold for early stopping
     )
     print("Training complete.")
 
@@ -91,7 +92,7 @@ try:
     train_acc = np.mean(y_train_pred == y_train)
     train_err = 1.0 - train_acc
     print(f"\nTraining Accuracy:   {train_acc * 100:.2f}%")
-    print(f"\nTraining Error:   {train_err * 100:.2f}%")
+    print(f"Training Error:   {train_err * 100:.2f}%")
 
     # Test Set
     y_test_pred = model.predict(x_test)

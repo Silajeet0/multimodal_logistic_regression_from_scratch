@@ -6,7 +6,7 @@ import shutil
 # 1. Define the folder to save in
 SAVE_DIR = "Dataset/fashionmnist"
 
-# 2. List of files to download (Official source, stable filenames)
+# 2. List of files to download
 FILES_TO_DOWNLOAD = [
     "http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz",
     "http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz",
@@ -48,7 +48,7 @@ def download_and_unzip():
             print(f"Skipping '{gz_filename}', final file already exists.")
             continue
 
-        # 1. Download the file
+        # Download the file
         try:
             print(f"Downloading '{gz_filename}'...")
             with requests.get(url, stream=True) as r:
@@ -60,7 +60,7 @@ def download_and_unzip():
             print(f"Error downloading {url}: {e}")
             continue
 
-        # 2. Unzip the file
+        # Unzip the file
         try:
             print(f"Unzipping '{gz_filename}'...")
             with gzip.open(gz_filepath, 'rb') as f_in:
@@ -69,7 +69,7 @@ def download_and_unzip():
         except Exception as e:
             print(f"Error unzipping {gz_filepath}: {e}")
 
-        # 3. Clean up the .gz file
+        # Clean up the .gz file
         try:
             os.remove(gz_filepath)
         except Exception as e:
@@ -77,7 +77,5 @@ def download_and_unzip():
 
     print("--- Download complete! ---")
 
-
-# This allows the script to be run directly or imported
 if __name__ == "__main__":
     download_and_unzip()
