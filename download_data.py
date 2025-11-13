@@ -3,10 +3,10 @@ import requests
 import gzip
 import shutil
 
-# 1. Define the folder to save in
+# Define the folder to save in
 SAVE_DIR = "Dataset/fashionmnist"
 
-# 2. List of files to download
+# List of files to download
 FILES_TO_DOWNLOAD = [
     "http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-images-idx3-ubyte.gz",
     "http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/train-labels-idx1-ubyte.gz",
@@ -14,7 +14,7 @@ FILES_TO_DOWNLOAD = [
     "http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/t10k-labels-idx1-ubyte.gz"
 ]
 
-# 3. Create the directory if it doesn't exist
+# Create the directory if it doesn't exist
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 
@@ -31,7 +31,7 @@ def download_and_unzip():
         gz_filepath = os.path.join(SAVE_DIR, gz_filename)
 
         # Get the final unzipped filename (e.g., 'train-images')
-        # We rename them to match what your main.py expects
+        # rename them to match what the main.py expects
         if "train-images" in gz_filename:
             final_name = "train-images"
         elif "train-labels" in gz_filename:

@@ -35,7 +35,7 @@ def readMNIST(label_filepath, image_filepath):
         Endianness refers to the order in which a computer stores the bytes of a multi-byte number in memory. 
             Big-Endian: Stores the "big end" (most significant byte) first. This is how humans read numbers.
             Little-Endian: Stores the "little end" (least significant byte) first. 
-        Since the MNIST file format was designed to be big-endian, we must explicitly tell our parsing code to 
+        Since the MNIST file format was designed to be big-endian, we must explicitly tell the parsing code to 
         read the bytes in that order using the > symbol. If we didn't, struct might use the system's native format 
         and get the header numbers completely wrong.
         '''

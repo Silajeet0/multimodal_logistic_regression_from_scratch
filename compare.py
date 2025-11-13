@@ -77,7 +77,7 @@ try:
     start_time = time.time()
 
     model = MultiClassLogisticRegression(n_features=n_features, n_classes=n_classes)
-    # Using 500 epochs based on previous loss curve analysis and early stopping
+    # Using 500 epochs based on previous loss curve analysis
     model.fit(x_train, y_train_one_hot, learning_rate=0.1, epochs=500)
 
     end_time = time.time()
@@ -101,7 +101,7 @@ try:
         }
     }
 
-    # 4. TRAIN & EVALUATE SKLEARN MODELS
+    # TRAIN & EVALUATE SKLEARN MODELS
     print("\n--- Training Scikit-learn Models ---")
 
     models_to_compare = {
@@ -154,7 +154,7 @@ try:
     plt.show()
 
     # Loss Curve
-    plt.figure()  # Create a new figure
+    plt.figure()
     plt.plot(model.loss_history)
     plt.title("From-Scratch Model Loss During Training (500 Epochs)")
     plt.xlabel("Epoch")
